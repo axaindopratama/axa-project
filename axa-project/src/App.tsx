@@ -8,6 +8,7 @@ import { Vendors } from '@/pages/Vendors';
 import { EntityForm } from '@/pages/EntityForm';
 import { Kanban } from '@/pages/Kanban';
 import { Scanner } from '@/pages/Scanner';
+import { Keuangan } from '@/pages/Keuangan';
 
 function App() {
   return (
@@ -33,6 +34,9 @@ function App() {
           
           {/* Scanner */}
           <Route path="scanner" element={<Scanner />} />
+          
+          {/* Keuangan */}
+          <Route path="keuangan" element={<Keuangan />} />
           
           {/* Placeholder routes */}
           <Route path="keuangan" element={<PlaceholderPage title="Keuangan" />} />

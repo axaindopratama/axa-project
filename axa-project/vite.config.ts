@@ -269,6 +269,88 @@ const apiPlugin = () => ({
             return;
           }
           
+          // Transactions - Get all or by project
+          if (url === 'transactions' && req.method === 'GET') {
+            const urlObj = new URL(req.url || '', 'http://localhost');
+            const projectId = urlObj.searchParams.get('projectId');
+            let data;
+            if (projectId) {
+              data = await db.select().from(transactions).where(eq(transactions.projectId, projectId)).orderBy(desc(transactions.transactionDate));
+            } else {
+              data = await db.select().from(transactions).orderBy(desc(transactions.transactionDate));
+            }
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(data));
+            return;
+          }
+          
+          // Transactions - Create
+          if (url === 'transactions' && req.method === 'POST') {
+            let body = '';
+            for await (const chunk of req) body += chunk;
+            const data = JSON.parse(body);
+            const id = crypto.randomUUID();
+            const now = new Date().toISOString();
+            
+            await db.insert(transactions).values({
+              id,
+              projectId: data.projectId,
+              entityId: data.entityId || null,
+              type: data.type,
+              amount: data.amount || 0,
+              description: data.description || null,
+              imageData: data.imageData || null,
+              paymentStatus: data.paymentStatus || 'lunas',
+              paidAmount: data.paidAmount || 0,
+              dueDate: data.dueDate || null,
+              paidDate: data.paymentStatus === 'lunas' ? now : null,
+              paymentMethod: data.paymentMethod || null,
+              transactionDate: data.transactionDate || now,
+            });
+            
+            const created = await db.select().from(transactions).where(eq(transactions.id, id)).limit(1);
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(created[0]));
+            return;
+          }
+          
+          // Transactions - Update
+          if (url.startsWith('transactions/') && req.method === 'PUT') {
+            const id = url.split('/')[1];
+            let body = '';
+            for await (const chunk of req) body += chunk;
+            const data = JSON.parse(body);
+            const now = new Date().toISOString();
+            
+            // Auto-update: cicilan -> lunas
+            const existing = await db.select().from(transactions).where(eq(transactions.id, id)).limit(1);
+            if (existing[0]) {
+              const paidAmount = data.paidAmount ?? existing[0].paidAmount;
+              if (paidAmount >= existing[0].amount && existing[0].paymentStatus === 'cicilan') {
+                data.paymentStatus = 'lunas';
+                data.paidDate = now;
+              }
+            }
+            
+            await db.update(transactions)
+              .set({ ...data, updatedAt: new Date().toISOString() })
+              .where(eq(transactions.id, id));
+            
+            const updated = await db.select().from(transactions).where(eq(transactions.id, id)).limit(1);
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(updated[0]));
+            return;
+          }
+          
+          // Transactions - Delete
+          if (url.startsWith('transactions/') && req.method === 'DELETE') {
+            const id = url.split('/')[1];
+            await db.delete(transactions).where(eq(transactions.id, id));
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: true }));
+            return;
+          }
+          
         } catch (error) {
           console.error('API Error:', error);
           res.statusCode = 500;
