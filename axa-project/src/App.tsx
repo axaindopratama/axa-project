@@ -9,6 +9,7 @@ import { EntityForm } from '@/pages/EntityForm';
 import { Kanban } from '@/pages/Kanban';
 import { Scanner } from '@/pages/Scanner';
 import { Keuangan } from '@/pages/Keuangan';
+import { Settings } from '@/pages/Settings';
 
 function App() {
   return (
@@ -37,6 +38,9 @@ function App() {
           
           {/* Keuangan */}
           <Route path="keuangan" element={<Keuangan />} />
+          
+          {/* Settings */}
+          <Route path="settings" element={<Settings />} />
           
           {/* Placeholder routes */}
           <Route path="keuangan" element={<PlaceholderPage title="Keuangan" />} />
