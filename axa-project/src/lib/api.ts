@@ -91,18 +91,35 @@ export async function getTasksByProject(projectId: string) {
   return res.json();
 }
 
-export async function createTask(data: any) {
-  // Implement if needed
-  return data;
+export async function createTask(data: {
+  projectId: string;
+  title: string;
+  description?: string;
+  status?: string;
+  priority?: string;
+  estimatedCost?: number;
+}) {
+  const res = await fetch(`${API_BASE}/tasks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
 }
 
 export async function updateTask(id: string, data: any) {
-  // Implement if needed
-  return data;
+  const res = await fetch(`${API_BASE}/tasks/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
 }
 
 export async function deleteTask(id: string) {
-  // Implement if needed
+  await fetch(`${API_BASE}/tasks/${id}`, {
+    method: 'DELETE',
+  });
 }
 
 // ============ ENTITIES (Vendor/Client) ============

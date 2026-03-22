@@ -218,6 +218,57 @@ const apiPlugin = () => ({
             return;
           }
           
+          // Tasks - Create
+          if (url === 'tasks' && req.method === 'POST') {
+            let body = '';
+            for await (const chunk of req) body += chunk;
+            const data = JSON.parse(body);
+            const id = crypto.randomUUID();
+            
+            await db.insert(tasks).values({
+              id,
+              projectId: data.projectId,
+              title: data.title,
+              description: data.description || null,
+              status: data.status || 'todo',
+              priority: data.priority || 'medium',
+              estimatedCost: data.estimatedCost || 0,
+              actualCost: data.actualCost || 0,
+              hours: data.hours || 0,
+            });
+            
+            const created = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(created[0]));
+            return;
+          }
+          
+          // Tasks - Update
+          if (url.startsWith('tasks/') && req.method === 'PUT') {
+            const id = url.split('/')[1];
+            let body = '';
+            for await (const chunk of req) body += chunk;
+            const data = JSON.parse(body);
+            
+            await db.update(tasks)
+              .set({ ...data, updatedAt: new Date().toISOString() })
+              .where(eq(tasks.id, id));
+            
+            const updated = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(updated[0]));
+            return;
+          }
+          
+          // Tasks - Delete
+          if (url.startsWith('tasks/') && req.method === 'DELETE') {
+            const id = url.split('/')[1];
+            await db.delete(tasks).where(eq(tasks.id, id));
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: true }));
+            return;
+          }
+          
         } catch (error) {
           console.error('API Error:', error);
           res.statusCode = 500;
