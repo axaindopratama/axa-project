@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colors - The Sovereign Ledger Design System */
+  --color-surface: #131315;
+  --color-surface-dim: #131315;
+  --color-surface-container-lowest: #0e0e10;
+  --color-surface-container-low: #1c1b1d;
+  --color-surface-container: #201f22;
+  --color-surface-container-high: #2a2a2c;
+  --color-surface-container-highest: #353437;
+  --color-surface-variant: #353437;
+  --color-surface-bright: #39393b;
+  
+  --color-surface-tint: #e9c176;
+  
+  --color-primary: #f1c97d;
+  --color-primary-dim: #e9c176;
+  --color-primary-container: #d4ad65;
+  --color-on-primary: #412d00;
+  --color-on-primary-container: #5b4000;
+  --color-primary-fixed: #ffdea5;
+  --color-primary-fixed-dim: #e9c176;
+  --color-on-primary-fixed: #261900;
+  --color-on-primary-fixed-variant: #5d4201;
+  
+  --color-inverse-primary: #775a19;
+  
+  --color-secondary: #c6c5cf;
+  --color-secondary-container: #4a4b53;
+  --color-on-secondary: #2f3038;
+  --color-on-secondary-container: #bcbbc5;
+  --color-secondary-fixed: #e3e1ec;
+  --color-secondary-fixed-dim: #c6c5cf;
+  --color-on-secondary-fixed: #1a1b22;
+  --color-on-secondary-fixed-variant: #46464e;
+  
+  --color-tertiary: #bfcdff;
+  --color-tertiary-container: #97b0ff;
+  --color-on-tertiary: #082b72;
+  --color-on-tertiary-container: #254188;
+  --color-tertiary-fixed: #dbe1ff;
+  --color-tertiary-fixed-dim: #b4c5ff;
+  --color-on-tertiary-fixed: #00174b;
+  --color-on-tertiary-fixed-variant: #27438a;
+  
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+  --color-on-error: #690005;
+  --color-on-error-container: #ffdad6;
+  
+  --color-background: #131315;
+  --color-on-background: #e5e1e4;
+  --color-on-surface: #e5e1e4;
+  --color-on-surface-variant: #d0c5af;
+  
+  --color-outline: #99907c;
+  --color-outline-variant: #4d4635;
+  --color-inverse-surface: #e5e1e4;
+  --color-inverse-on-surface: #313032;
+
+  /* Fonts */
+  --font-headline: "Manrope", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-label: "Inter", sans-serif;
+  
+  /* Border Radius */
+  --radius-default: 0.125rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.5rem;
+  --radius-full: 0.75rem;
+}
+
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+/* Base styles */
+@layer base {
+  html {
+    font-family: var(--font-body);
+    background-color: var(--color-surface);
+    color: var(--color-on-surface);
+  }
+  
+  body {
+    margin: 0;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  * {
+    border-color: var(--color-outline-variant);
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-surface-container-low);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-surface-container-highest);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-surface-variant);
+  }
+}
+
+/* Utility classes */
+@layer utilities {
+  .font-headline {
+    font-family: var(--font-headline);
+  }
+  
+  .font-body {
+    font-family: var(--font-body);
+  }
+  
+  .font-label {
+    font-family: var(--font-label);
+  }
+
+  /* Gold gradient for CTA */
+  .gold-gradient {
+    background: linear-gradient(135deg, #f1c97d 0%, #d4ad65 100%);
+  }
+
+  /* Glass panel effect */
+  .glass-panel {
+    background: rgba(53, 52, 55, 0.4);
+    backdrop-filter: blur(20px);
+  }
+
+  /* No-line styling - tonal shifts */
+  .surface-low {
+    background-color: var(--color-surface-container-low);
+  }
+
+  .surface-high {
+    background-color: var(--color-surface-container-high);
+  }
+
+  .surface-highest {
+    background-color: var(--color-surface-container-highest);
+  }
+
+  /* Material symbols */
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    vertical-align: middle;
+  }
+}
+
+/* Selection styling */
+::selection {
+  background-color: rgba(241, 201, 125, 0.3);
+}
