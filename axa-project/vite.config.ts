@@ -112,6 +112,35 @@ const apiPlugin = () => ({
             return;
           }
           
+          // Update Project (PUT /api/projects/:id)
+          if (url.startsWith('projects/') && req.method === 'PUT') {
+            const id = url.split('/')[1];
+            let body = '';
+            for await (const chunk of req) body += chunk;
+            const data = JSON.parse(body);
+            
+            await db.update(projects)
+              .set({ 
+                ...data, 
+                updatedAt: new Date().toISOString() 
+              })
+              .where(eq(projects.id, id));
+            
+            const updated = await db.select().from(projects).where(eq(projects.id, id)).limit(1);
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(updated[0]));
+            return;
+          }
+          
+          // Delete Project (DELETE /api/projects/:id)
+          if (url.startsWith('projects/') && req.method === 'DELETE') {
+            const id = url.split('/')[1];
+            await db.delete(projects).where(eq(projects.id, id));
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: true }));
+            return;
+          }
+          
           // Entities
           if (url === 'entities' && req.method === 'GET') {
             const urlObj = new URL(req.url || '', 'http://localhost');

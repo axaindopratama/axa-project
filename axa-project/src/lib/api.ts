@@ -35,12 +35,18 @@ export async function createProject(data: {
 }
 
 export async function updateProject(id: string, data: any) {
-  // For now, we'll skip full update implementation
-  return getProjectById(id);
+  const res = await fetch(`${API_BASE}/projects/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
 }
 
 export async function deleteProject(id: string) {
-  // Implement if needed
+  await fetch(`${API_BASE}/projects/${id}`, {
+    method: 'DELETE',
+  });
 }
 
 // ============ MILESTONES ============
