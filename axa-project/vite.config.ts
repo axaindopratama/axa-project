@@ -299,6 +299,7 @@ const apiPlugin = () => ({
               type: data.type,
               amount: data.amount || 0,
               description: data.description || null,
+              category: data.category || null,
               imageData: data.imageData || null,
               paymentStatus: data.paymentStatus || 'lunas',
               paidAmount: data.paidAmount || 0,

@@ -20,13 +20,29 @@ interface Transaction {
   paymentStatus: string;
   paidAmount: number;
   transactionDate: string | null;
+  category?: string;
 }
+
+type IncomeCategory = 'kontrak' | 'lainnya';
+type ExpenseCategory = 'gaji' | 'operasional' | 'lainnya';
 
 export function Keuangan() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  
+  // Modal state
+  const [showModal, setShowModal] = useState(false);
+  const [transactionType, setTransactionType] = useState<'income' | 'expense'>('income');
+  const [formData, setFormData] = useState({
+    amount: '',
+    description: '',
+    category: '' as IncomeCategory | ExpenseCategory | '',
+    paymentStatus: 'lunas' as 'lunas' | 'belum_lunas' | 'cicilan',
+    paidAmount: '',
+    transactionDate: new Date().toISOString().split('T')[0],
+  });
 
   useEffect(() => {
     loadData();
@@ -62,6 +78,40 @@ export function Keuangan() {
     }
   }
 
+  const handleOpenModal = (type: 'income' | 'expense') => {
+    setTransactionType(type);
+    setFormData({
+      amount: '',
+      description: '',
+      category: type === 'income' ? 'kontrak' : 'gaji',
+      paymentStatus: 'lunas',
+      paidAmount: '',
+      transactionDate: new Date().toISOString().split('T')[0],
+    });
+    setShowModal(true);
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedProject || !formData.amount || !formData.category) return;
+    
+    try {
+      await api.createTransaction({
+        projectId: selectedProject,
+        type: transactionType,
+        amount: parseFloat(formData.amount),
+        description: formData.description || (transactionType === 'income' ? 'Pemasukan' : 'Pengeluaran'),
+        paymentStatus: formData.paymentStatus,
+        paidAmount: formData.paymentStatus === 'lunas' ? parseFloat(formData.amount) : (parseFloat(formData.paidAmount) || 0),
+        transactionDate: formData.transactionDate,
+      });
+      
+      setShowModal(false);
+      loadTransactions();
+    } catch (error) {
+      console.error('Failed to create transaction:', error);
+    }
+  };
+
   const selectedProjectData = projects.find(p => p.id === selectedProject);
   
   // Calculate stats
@@ -82,16 +132,13 @@ export function Keuangan() {
   const budgetUsedPercent = budget > 0 ? (actualSpent / budget) * 100 : 0;
   const budgetRemaining = budget - actualSpent;
   
-  // Payment Liability = budget - actual spent - unpaid
   const paymentLiability = budget - actualSpent - accountsPayable;
   
-  // Burn rate (daily average spending)
   const startDate = selectedProjectData?.startDate ? new Date(selectedProjectData.startDate) : null;
   const daysActive = startDate ? Math.max(1, Math.floor((Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24))) : 1;
   const burnRate = actualSpent / daysActive;
   const daysUntilBudgetRunsOut = burnRate > 0 ? Math.floor(budgetRemaining / burnRate) : 0;
   
-  // Threshold colors
   const getThresholdColor = (percent: number) => {
     if (percent >= 80) return 'bg-error';
     if (percent >= 60) return 'bg-yellow-500';
@@ -106,39 +153,62 @@ export function Keuangan() {
 
   const getPaymentStatusBadge = (status: string) => {
     switch (status) {
-      case 'lunas':
-        return 'bg-primary/20 text-primary';
-      case 'belum_lunas':
-        return 'bg-error/20 text-error';
-      case 'cicilan':
-        return 'bg-yellow-500/20 text-yellow-500';
-      default:
-        return 'bg-zinc-500/20 text-zinc-400';
+      case 'lunas': return 'bg-primary/20 text-primary';
+      case 'belum_lunas': return 'bg-error/20 text-error';
+      case 'cicilan': return 'bg-yellow-500/20 text-yellow-500';
+      default: return 'bg-zinc-500/20 text-zinc-400';
     }
   };
 
   const getPaymentStatusText = (status: string) => {
     switch (status) {
-      case 'lunas':
-        return 'Lunas';
-      case 'belum_lunas':
-        return 'Belum Lunas';
-      case 'cicilan':
-        return 'Cicilan';
-      default:
-        return status;
+      case 'lunas': return 'Lunas';
+      case 'belum_lunas': return 'Belum Lunas';
+      case 'cicilan': return 'Cicilan';
+      default: return status;
     }
+  };
+
+  const getCategoryLabel = (type: string, category?: string) => {
+    if (type === 'income') {
+      return category === 'kontrak' ? 'Kontrak/DP' : 'Lainnya';
+    }
+    if (type === 'expense') {
+      if (category === 'gaji') return 'Gaji';
+      if (category === 'operasional') return 'Operasional';
+      return 'Lainnya';
+    }
+    return '';
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-headline font-bold text-on-surface">Keuangan</h1>
           <p className="text-zinc-500 text-sm mt-1">Arus kas dan budget forecasting</p>
         </div>
         
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleOpenModal('income')}
+            className="gold-gradient px-4 py-2 rounded-lg text-on-primary font-label font-medium text-sm hover:opacity-90 transition-opacity"
+          >
+            + Pemasukan
+          </button>
+          <button
+            onClick={() => handleOpenModal('expense')}
+            className="bg-error/20 px-4 py-2 rounded-lg text-error font-label font-medium text-sm hover:bg-error/30 transition-colors"
+          >
+            + Pengeluaran
+          </button>
+        </div>
+      </div>
+
+      {/* Project Selector */}
+      <div className="flex items-center gap-4">
+        <label className="text-sm text-zinc-400">Proyek:</label>
         <select
           value={selectedProject}
           onChange={(e) => setSelectedProject(e.target.value)}
@@ -152,9 +222,9 @@ export function Keuangan() {
 
       {/* Budget Overview */}
       <div className="bg-surface-container-low p-6 rounded-lg">
-        <h3 className="font-headline font-semibold text-on-surface mb-4">Budget Overview</h3>
+        <h3 className="font-headline font-semibold text-on-surface mb-4">Ringkasan Budget</h3>
         
-        <div className="grid grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="text-center p-4 bg-surface-container-high rounded-lg">
             <p className="text-xs text-zinc-500 uppercase tracking-widest">Total Budget</p>
             <p className="text-xl font-headline font-bold text-primary mt-1">{formatCurrency(budget)}</p>
@@ -196,50 +266,26 @@ export function Keuangan() {
             />
           </div>
           <div className="flex justify-between text-xs text-zinc-500 mt-1">
-            <span>0%</span>
-            <span>60%</span>
-            <span>80%</span>
-            <span>100%</span>
-          </div>
-        </div>
-
-        {/* Threshold Info */}
-        <div className="mt-4 flex items-center gap-4 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded bg-primary" />
-            <span className="text-zinc-400">Normal (&lt;60%)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded bg-yellow-500" />
-            <span className="text-zinc-400">Warning (60-80%)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded bg-error" />
-            <span className="text-zinc-400">Critical (&gt;80%)</span>
+            <span>0%</span><span>60%</span><span>80%</span><span>100%</span>
           </div>
         </div>
       </div>
 
-      {/* Burn Rate & Forecast */}
-      <div className="grid grid-cols-2 gap-6">
+      {/* Burn Rate & Cash Flow */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-surface-container-low p-6 rounded-lg">
           <h3 className="font-headline font-semibold text-on-surface mb-4">Burn Rate</h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <span className="text-zinc-400">Rata-rata pengeluaran per hari</span>
-              <span className="text-lg font-headline font-bold text-primary">{formatCurrency(burnRate)}/hari</span>
+              <span className="text-zinc-400">Rata-rata pengeluaran/hari</span>
+              <span className="text-lg font-headline font-bold text-primary">{formatCurrency(burnRate)}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-zinc-400">Estimasi budget habis dalam</span>
+              <span className="text-zinc-400">Estimasi budget habis</span>
               <span className={`text-lg font-headline font-bold ${daysUntilBudgetRunsOut > 0 ? 'text-tertiary' : 'text-error'}`}>
-                {daysUntilBudgetRunsOut > 0 ? `${daysUntilBudgetRunsOut} hari` : 'Budget sudah habis'}
+                {daysUntilBudgetRunsOut > 0 ? `${daysUntilBudgetRunsOut} hari` : 'Habis'}
               </span>
             </div>
-            {startDate && (
-              <div className="text-xs text-zinc-500">
-                Project dimulai: {formatDate(startDate)} ({daysActive} hari)
-              </div>
-            )}
           </div>
         </div>
 
@@ -289,8 +335,17 @@ export function Keuangan() {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-on-surface font-label">{t.description || t.type === 'income' ? 'Pemasukan' : 'Pengeluaran'}</p>
-                    <p className="text-xs text-zinc-500">{t.transactionDate ? formatDate(t.transactionDate) : '-'}</p>
+                    <p className="text-on-surface font-label">
+                      {t.description || (t.type === 'income' ? 'Pemasukan' : 'Pengeluaran')}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-zinc-500">
+                        {t.transactionDate ? formatDate(t.transactionDate) : '-'}
+                      </span>
+                      <span className="text-xs px-2 py-0.5 rounded bg-surface-container-highest text-zinc-400">
+                        {getCategoryLabel(t.type, t.category)}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <div className="text-right">
@@ -306,6 +361,131 @@ export function Keuangan() {
           </div>
         )}
       </div>
+
+      {/* Transaction Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface-container-low p-6 rounded-lg w-full max-w-md">
+            <h3 className="text-lg font-headline font-semibold text-on-surface mb-4">
+              {transactionType === 'income' ? 'Tambah Pemasukan' : 'Tambah Pengeluaran'}
+            </h3>
+            
+            <div className="space-y-4">
+              {/* Amount */}
+              <div>
+                <label className="block text-sm text-zinc-400 mb-1">Nominal (IDR) *</label>
+                <input
+                  type="number"
+                  value={formData.amount}
+                  onChange={(e) => setFormData(f => ({ ...f, amount: e.target.value }))}
+                  className="w-full bg-surface-container-highest px-4 py-2 rounded-lg border border-outline-variant/15 text-on-surface"
+                  placeholder="0"
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm text-zinc-400 mb-1">Kategori *</label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => setFormData(f => ({ ...f, category: e.target.value as any }))}
+                  className="w-full bg-surface-container-highest px-4 py-2 rounded-lg border border-outline-variant/15 text-on-surface"
+                >
+                  {transactionType === 'income' ? (
+                    <>
+                      <option value="kontrak">Kontrak / DP Proyek</option>
+                      <option value="lainnya">Lainnya</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="gaji">Gaji Karyawan</option>
+                      <option value="operasional">Biaya Operasional</option>
+                      <option value="lainnya">Lainnya</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm text-zinc-400 mb-1">Deskripsi</label>
+                <input
+                  type="text"
+                  value={formData.description}
+                  onChange={(e) => setFormData(f => ({ ...f, description: e.target.value }))}
+                  className="w-full bg-surface-container-highest px-4 py-2 rounded-lg border border-outline-variant/15 text-on-surface"
+                  placeholder="Opsional..."
+                />
+              </div>
+
+              {/* Date */}
+              <div>
+                <label className="block text-sm text-zinc-400 mb-1">Tanggal</label>
+                <input
+                  type="date"
+                  value={formData.transactionDate}
+                  onChange={(e) => setFormData(f => ({ ...f, transactionDate: e.target.value }))}
+                  className="w-full bg-surface-container-highest px-4 py-2 rounded-lg border border-outline-variant/15 text-on-surface"
+                />
+              </div>
+
+              {/* Payment Status - only for expenses */}
+              {transactionType === 'expense' && (
+                <div>
+                  <label className="block text-sm text-zinc-400 mb-1">Status Pembayaran</label>
+                  <div className="flex gap-2">
+                    {(['lunas', 'belum_lunas', 'cicilan'] as const).map((status) => (
+                      <button
+                        key={status}
+                        type="button"
+                        onClick={() => setFormData(f => ({ ...f, paymentStatus: status }))}
+                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-label transition-colors ${
+                          formData.paymentStatus === status
+                            ? status === 'lunas' ? 'bg-primary/20 text-primary'
+                              : status === 'belum_lunas' ? 'bg-error/20 text-error'
+                              : 'bg-yellow-500/20 text-yellow-500'
+                            : 'bg-surface-container-high text-zinc-400'
+                        }`}
+                      >
+                        {status === 'lunas' ? 'Lunas' : status === 'belum_lunas' ? 'Belum' : 'Cicilan'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Paid Amount - for cicilan */}
+              {transactionType === 'expense' && formData.paymentStatus === 'cicilan' && (
+                <div>
+                  <label className="block text-sm text-zinc-400 mb-1">Jumlah Dibayar</label>
+                  <input
+                    type="number"
+                    value={formData.paidAmount}
+                    onChange={(e) => setFormData(f => ({ ...f, paidAmount: e.target.value }))}
+                    className="w-full bg-surface-container-highest px-4 py-2 rounded-lg border border-outline-variant/15 text-on-surface"
+                    placeholder="0"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleSubmit}
+                className="gold-gradient px-6 py-2 rounded-lg text-on-primary font-label font-medium"
+              >
+                Simpan
+              </button>
+              <button
+                onClick={() => setShowModal(false)}
+                className="bg-surface-container-highest px-6 py-2 rounded-lg text-zinc-400 font-label"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

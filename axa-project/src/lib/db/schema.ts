@@ -117,6 +117,7 @@ export const transactions = sqliteTable('transactions', {
   type: text('type').notNull(), // income, expense
   amount: real('amount').notNull().default(0),
   description: text('description'),
+  category: text('category'), // income: kontrak, lainnya | expense: gaji, operasional, lainnya
   receiptUrl: text('receipt_url'),
   imageData: text('image_data'), // Base64 or stored image path
   
