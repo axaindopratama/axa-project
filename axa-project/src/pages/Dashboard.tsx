@@ -1,14 +1,65 @@
-import { formatCurrency } from '@/lib/utils';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { formatCurrency, formatDate } from '@/lib/utils';
+import * as api from '@/lib/api';
+
+interface Project {
+  id: string;
+  number: string;
+  name: string;
+  budget: number;
+  status: string;
+  startDate: string | null;
+}
+
+interface Stats {
+  totalProjects: number;
+  activeProjects: number;
+  totalBudget: number;
+  totalSpent: number;
+  accountsPayable: number;
+}
 
 export function Dashboard() {
-  // Placeholder data - will be replaced with real data from database
-  const stats = {
+  const [stats, setStats] = useState<Stats>({
     totalProjects: 0,
     activeProjects: 0,
     totalBudget: 0,
     totalSpent: 0,
     accountsPayable: 0,
-  };
+  });
+  const [recentProjects, setRecentProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    try {
+      const [statsData, projects] = await Promise.all([
+        api.getProjectStats(),
+        api.getProjects(),
+      ]);
+      
+      setStats(statsData);
+      setRecentProjects(projects.slice(0, 5));
+    } catch (error) {
+      console.error('Failed to load dashboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const hasData = stats.totalProjects > 0;
 
   return (
     <div className="space-y-6">
@@ -79,29 +130,80 @@ export function Dashboard() {
       {/* Quick Actions */}
       <div className="bg-surface-container-low p-6 rounded-lg">
         <h2 className="text-lg font-headline font-semibold text-on-surface mb-4">Quick Actions</h2>
-        <div className="flex gap-4">
-          <button className="gold-gradient px-6 py-3 rounded-lg text-on-primary font-label font-medium text-sm hover:opacity-90 transition-opacity">
+        <div className="flex gap-4 flex-wrap">
+          <Link
+            to="/projects/new"
+            className="gold-gradient px-6 py-3 rounded-lg text-on-primary font-label font-medium text-sm hover:opacity-90 transition-opacity"
+          >
             + Proyek Baru
-          </button>
-          <button className="bg-surface-container-highest px-6 py-3 rounded-lg text-on-surface font-label font-medium text-sm border border-outline-variant/15 hover:bg-surface-container-high transition-colors">
+          </Link>
+          <Link
+            to="/scanner"
+            className="bg-surface-container-highest px-6 py-3 rounded-lg text-on-surface font-label font-medium text-sm border border-outline-variant/15 hover:bg-surface-container-high transition-colors"
+          >
             Scan Nota
-          </button>
-          <button className="bg-surface-container-highest px-6 py-3 rounded-lg text-on-surface font-label font-medium text-sm border border-outline-variant/15 hover:bg-surface-container-high transition-colors">
+          </Link>
+          <Link
+            to="/vendors/new"
+            className="bg-surface-container-highest px-6 py-3 rounded-lg text-on-surface font-label font-medium text-sm border border-outline-variant/15 hover:bg-surface-container-high transition-colors"
+          >
             Tambah Vendor
-          </button>
+          </Link>
         </div>
       </div>
 
-      {/* Empty State Message */}
-      <div className="text-center py-12">
-        <div className="w-16 h-16 bg-surface-container-high rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-          </svg>
+      {/* Recent Projects */}
+      {hasData ? (
+        <div className="bg-surface-container-low p-6 rounded-lg">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-headline font-semibold text-on-surface">Proyek Terbaru</h2>
+            <Link to="/projects" className="text-primary hover:text-primary-dim text-sm font-label">
+              Lihat Semua →
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {recentProjects.map((project) => (
+              <Link
+                key={project.id}
+                to={`/projects/${project.id}`}
+                className="flex items-center justify-between p-4 bg-surface-container-high rounded-lg hover:bg-surface-container-highest transition-colors"
+              >
+                <div className="flex items-center gap-4">
+                  <span className="text-xs font-label text-zinc-500 uppercase tracking-widest">#{project.number}</span>
+                  <span className="text-on-surface font-label">{project.name}</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className={`px-2 py-1 rounded text-xs font-label ${
+                    project.status === 'active' ? 'bg-tertiary/20 text-tertiary' : 'bg-primary/20 text-primary'
+                  }`}>
+                    {project.status === 'active' ? 'Aktif' : 'Selesai'}
+                  </span>
+                  <span className="text-primary font-headline font-semibold">
+                    {formatCurrency(project.budget)}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
-        <h3 className="text-lg font-headline font-medium text-on-surface">Belum ada proyek</h3>
-        <p className="text-zinc-500 text-sm mt-2">Mulai dengan membuat proyek pertama Anda</p>
-      </div>
+      ) : (
+        /* Empty State */
+        <div className="text-center py-12 bg-surface-container-low rounded-lg">
+          <div className="w-16 h-16 bg-surface-container-high rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-headline font-medium text-on-surface">Belum ada proyek</h3>
+          <p className="text-zinc-500 text-sm mt-2">Mulai dengan membuat proyek pertama Anda</p>
+          <Link
+            to="/projects/new"
+            className="inline-block mt-4 gold-gradient px-6 py-3 rounded-lg text-on-primary font-label font-medium text-sm hover:opacity-90 transition-opacity"
+          >
+            + Proyek Baru
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
